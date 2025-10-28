@@ -1,0 +1,21 @@
+{
+    "assessment_id": "asm_1001",
+    "tea_id": "tea_001",
+    "name": "무이산 마두암 육계",
+    "production_year": 2022,
+    "author_id": "user_001",
+    "assessed_at": "2025-10-27T14:10:00Z",
+    "brewing_context": "6g / 100ml, 95°C, 10s 첫탕. 향미가 맑고 미세한 미네랄감이 뚜렷.",
+    "thickness": 6.5,
+    "density": 7.0,
+    "smoothness": 7.5,
+    "clarity": 7.0,
+    "granularity": 7.0,
+    "aroma_length": 3.5,
+    "delicacy": 3.0,
+    "continuity": 3.5,
+    "aftertaste": 3.0,
+    "refinement": 3.5,
+    "created_at": "2025-10-27T15:00:00Z",
+    "updated_at": "2025-10-27T15:00:00Z"
+}
