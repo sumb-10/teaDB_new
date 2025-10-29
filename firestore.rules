@@ -1,18 +1,75 @@
-rules_version='2'
-
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 11, 28);
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function uid() {
+      return request.auth.uid;
+    }
+    function hasRole(role) {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles/$(uid())) &&
+             get(/databases/$(database)/documents/roles/$(uid())).data[role] == true;
+    }
+    function isAdmin() { return hasRole("admin"); }
+    function isPanel() { return hasRole("panel"); }
+    function isGuest() { return hasRole("guest"); }
+
+    // ---- users ----
+    match /users/{userId} {
+      allow read: if isAdmin() || (isSignedIn() && userId == uid());
+      allow write: if isAdmin() || (isSignedIn() && userId == uid());
+    }
+
+    // ---- roles ---- (admin만 부여/회수)
+    match /roles/{userId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ---- purchaseSources ---- (admin만 열람)
+    match /purchaseSources/{psId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ---- teas ----
+    match /teas/{teaId} {
+      // 모든 로그인 사용자는 열람 가능 (guest 포함)
+      allow read: if isSignedIn();
+      // 생성은 admin, panel 허용
+      allow create: if isAdmin() || isPanel();
+      // 수정/삭제 정책: admin 허용, panel은 정책에 따라 제한(여기선 생성자 개념이 없으니 admin만)
+      allow update, delete: if isAdmin() || isPanel();
+    }
+
+    // ---- assessments(민감 X) ----
+    match /assessments/{aid} {
+      // admin: 모든 읽기/쓰기 허용
+      // panel: 읽기 가능, guest: 읽기 불가
+      allow read: if isAdmin() || isPanel();
+      // 생성: admin + panel
+      allow create: if isAdmin() || isPanel();
+      // 수정/삭제: 작성자 또는 admin
+      // 작성자 검증은 assessmentMeta에서 author_id 조회
+      allow update, delete: if isAdmin() || (
+        isPanel() &&
+        exists(/databases/$(database)/documents/assessmentMeta/$(aid)) &&
+        get(/databases/$(database)/documents/assessmentMeta/$(aid)).data.author_id == uid()
+      );
+    }
+
+    // ---- assessmentMeta(민감: author_id) — admin 전용 ----
+    match /assessmentMeta/{aid} {
+      allow read, write: if isAdmin();
+    }
+
+    // ---- teaAggregates(평균/집계) ----
+    match /teaAggregates/{teaId} {
+      // 로그인 사용자 누구나 열람 (guest 허용)
+      allow read: if isSignedIn();
+      // 쓰기는 서버(Cloud Functions) 만. 클라이언트 금지
+      allow write: if false;
     }
   }
 }
